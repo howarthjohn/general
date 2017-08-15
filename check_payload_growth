@@ -1,0 +1,84 @@
+#!/usr/bin/python
+
+import MySQLdb
+import sys
+import time
+import os
+from datetime import datetime, timedelta
+
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../')
+from sfab.statsd import Statsd
+
+date = datetime.utcnow() - timedelta(days=1)
+
+# Main DB
+HOST = "hippo-main.chazlnrgpojd.us-east-1.rds.amazonaws.com"
+DB = "VirtualGoods"
+USERNAME = "swrve"
+PASSWORD = "swrve1066"
+
+# Payload DB
+PAYLOAD_HOST = "hippo-main-payloads-master.chazlnrgpojd.us-east-1.rds.amazonaws.com"
+PAYLOAD_DB = "VirtualGoods"
+PAYLOAD_USERNAME = "swrve"
+PAYLOAD_PASSWORD = "swrve1066"
+
+#Games
+GAMES=[380]
+
+# Process all segments, or just default segments?
+ALL_SEGMENTS = False
+
+#Process all games, or just specified game
+ALL_GAMES = True
+
+# Day to consider
+fmt = 'D-%Y-%m-%d'
+# TIME_STR="D-2013-03-11"
+TIME_STR = date.strftime(fmt)
+
+db=MySQLdb.connect(passwd=PASSWORD,user=USERNAME,db=DB,host=HOST)
+pdb=MySQLdb.connect(passwd=PAYLOAD_PASSWORD,user=PAYLOAD_USERNAME,db=PAYLOAD_DB,host=PAYLOAD_HOST)
+c = pdb.cursor()
+c.execute("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
+
+c = db.cursor()
+
+c.execute("SELECT id FROM games")
+game_ids = [x[0] for x in c.fetchall()]
+c.close()
+ctr = 0
+if not ALL_GAMES:
+  game_ids = GAMES
+for game_id in game_ids:
+  tmp_count = 0
+  c = db.cursor()
+  c.execute("SELECT id FROM saved_filters where game_id=%s AND deleted=0", game_id)
+  filters = [str(x[0]) for x in c.fetchall()]
+  c.close()
+  filters.append(-1)
+  if not ALL_SEGMENTS:
+    filters = [-1]
+  for filter_id in filters:
+    ctr += 1
+    c = db.cursor()
+    c.execute("SELECT event_name FROM event_details WHERE game_id='%s'" % game_id)
+    event_names = [x[0] for x in c.fetchall()]
+    c.close()
+    ctr2 = 0
+    for event_name in event_names:
+      ctr2 += 1
+      # print "Game %s (%s of %s) event %s (%s of %s)" % (game_id, ctr, len(game_ids), event_name, ctr2, len(event_names))
+      c = pdb.cursor()
+      if filter_id==-1:
+        filter_name = "default_segment"
+      else:
+        filter_name = "filter_%s" % filter_id
+      c.execute("SELECT COUNT(*) FROM event_payload_keys WHERE game_id=%s and segment_id=%s and bucket=%s AND event_name=%s", (game_id, filter_name, TIME_STR, event_name))
+     # print "SELECT COUNT(*) FROM event_payload_keys WHERE game_id='%s' and segment_id='%s' and bucket='%s' AND event_name='%s'" % (game_id, filter_name, TIME_STR, event_name)
+      count = c.fetchall()[0][0]
+      #print "%s of %s,%s" % (ctr, len(filters), event_name)
+      c.close()
+      tmp_count += count
+  Statsd.update_gauge("RDS.payload_size.%s" % game_id, str(tmp_count))

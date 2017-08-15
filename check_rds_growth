@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import boto
+from datetime import datetime, timedelta
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../')
+from sfab.statsd import Statsd
+
+end = datetime.utcnow()
+start = end - timedelta(days=1)
+metric_name = 'FreeStorageSpace'
+namespace = 'AWS/RDS'
+statistics = ['Maximum', 'Average']
+
+
+def get_db_metrics(dbs):
+    for db in dbs:
+        print "## Doing", db
+        dimensions = {'DBInstanceIdentifier': db}
+        datapoint = conn.get_metric_statistics(86400, start, end, metric_name, namespace, statistics, dimensions)
+        Statsd.update_stats("RDS.%s.free_space" % db, str(datapoint[0]['Maximum'] * 10))
+        Statsd.update_gauge("RDS.%s.free_space" % db, str(datapoint[0]['Maximum'] * 10))
+
+# Main stack
+ec2_key = 'AKIAJIPYNTLQOKKNZW6Q'
+ec2_secret = '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'
+conn = boto.connect_cloudwatch(ec2_key, ec2_secret)
+dbs = ['hippo-main', 'hippo-xmg', 'hippo-funtactix', 'hippo-breaktime', 'hippo-main-payloads-master']
+get_db_metrics(dbs)
+
+# Activision stack
+ec2_key = 'AKIAJQJWA4MDXYLSO2YQ'
+ec2_secret = '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'
+conn = boto.connect_cloudwatch(ec2_key, ec2_secret)
+dbs = ['activision-hen']
+get_db_metrics(dbs)
