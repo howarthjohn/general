@@ -1,0 +1,24 @@
+Welcome to the Dan-project-thunder repository.
+
+Synopsys:
+-------------
+Here you will find generic Terraform templates which should be used to create and operate your cloud environments.
+Until such time that Project thunder is able to offer a platform where all of this is configured and running
+please use the cloud governance principles and guidelines and the Terraform templates provided to operate in the cloud.
+
+We as an organisation should operate in the cloud or in the DC with DevOps best practices. One of the fundamental
+component of this is infrastructure as code. Terraform is a infrastructure provisioning and automation tool
+written and supported by Hashicorp. Its One tool to rule them all. It is fully open-source with an option to
+purchase support and premium version. Open-source version if perfectly adequate for our use-cases.
+
+We actively encourage the use of TF for all things cloud. Avoid using cloud provider specific provisioning tools like
+cloud formations, heat templates etc. Or even chef provisioning, ansible etc. With this method, you will only
+have to learn TF and will get up to speed in no time.
+
+If you have multiple engineers/developers wanting to use TF, please read the following GOTCHA's:
+https://medium.com/google-cloud/five-things-learned-using-terraform-to-manage-cloud-infrastructure-5ad0d4aa0648
+
+Most of these can be remediated using CI/CD.
+
+Should you require any help or handy tips, feel free to join our SLACK channel with your company email address:
+dan-project-thunder
