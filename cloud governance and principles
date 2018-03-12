@@ -1,0 +1,73 @@
+Cloud Governance, principals and guidelines.
+Version: 0.1 - Draft
+Date: 08/03/2018
+Author: Ali Aktar
+
+Summary:  This guide will walk you through some initial thoughts around things that should be considered when operating in the cloud in general. The purpose of this document is to ensure that any workloads being provisioned observe certain standardisation and best practices around:
+    • Naming Conventions
+    • Tagging
+    • VPC design principles
+    • Security groups and firewall designs
+    • Load balancing and routing
+    • VPC peering or inter VPC routing
+    • Instance based best practices.
+    • Hosted SaaS v Create your own
+
+Naming conventions
+
+$purpose-$function-$region-$provider.$domainname
+
+For example: jenkins-app01-eu.aws.inmarsat.com
+
+Tagging
+
+All instances should be tagged with the following bare minimum tags:
+Brand = Business Unit
+Project = Name of project
+BPC Entity ID = Charge or cost centre
+Owner = Who is the project or workload owner
+Environment = dev/stg/prod
+
+VPC design principles, Security groups, LB’s
+
+Depending on the type of workload you are running you can design a VPC accordingly. Here are a few guiding principles:
+Is your VPC going to run only private/public/mixed workload?
+It really does not matter which type of workload it will run, you can design your VPC in such a way that its inherently secure.
+
+Separate your workload and create different subnets for different types of workloads. For example, you may have 3 tier subnets for web, app and db. Separate these into their own subnet: Here is a really nice guide you can follow to observe these best practices:
+http://blog.flux7.com/blogs/aws/vpc-best-configuration-practices
+
+    • TAG EVERYTHING.
+    • Create Public and Private subnets.
+    • Public subnets should only be for Load Balancers. Private subnets should be for compute instances only.
+    • Do not add public IP's to instances. They should only have private ip's
+    • Create routes and enter specific routes between subnets, avoid being too generic. Be specific. Start with full lockdown and then open up access and routing in a controlled way.
+    • Create security groups for each type of workload and associate your computes to them.
+    • Associate security groups to other security groups by name and define very specific inbound and outbound ports.
+    • DO NOT run any compute instances on the public subnet except for NAT instances.
+    • Allow only the specific ports you need into your load balancer i.e. 80 0r 443.
+    • Create a LB security group and if possible allow only specific Public IP’s access to the LB. For example, if you know that only Dentsu London office will access this service, then only allow the public IP for the London office (you can get this by either contacting the network team or typing ‘what is my ip’ in a browser from your specific site office location). Add these site addresses to the allow inbound and outbound rules and it will inherently reduce your attack surface.
+    • Add the LB security group name to the private instance security group (depending on which instances the LB needs access to) with the specific port only.
+    • Liaise with the central team for cloud management and if you will have a need for DC connectivity. If you do, then you'll need to
+      consider what type of subnet addressing you'll use to avoid IP address conflicts.
+
+VPC peering or inter vpc routing.
+    • Be specific in your routing and ip/subnet definitions so that the routing between each vpc is specific to subnets and not to everything.
+
+Instance based best practices.
+    • Use something like packer (https://www.packer.io/) to create your machine images. Update them every time you create your images.
+    • Keep maybe 3-5 of your previous images and always get rid of the rest.
+    • Version your images
+    • Use different images for different types of workloads and always remove unnecessary software
+    • Remove any services or ports that you don't need.
+    • Always use roles with policies attached to them and attach these roles to each instance. You can then control what the instance can and cant do, i.e. access to S3 for example.
+    • Try to do some analysis and number crunching from your NFR's to determine what type of instance you need. Undersize first if you have to
+      then reconsider if its not enough.
+    • Always look at cost savings. Consider auto-shutdown and auto-start of instances. 8am start, 8pm stop. Shutdown during weeks.
+    https://aws.amazon.com/premiumsupport/knowledge-center/start-stop-lambda-cloudwatch/
+
+Hosted SaaS v Create your own.
+    • Always consider using the cloud providers SaaS solutions over creating and maintaining your own. Reasons are obvious. You have no overhead.
+      If you ever want to move to another provider or another DB technology for example, all you have to worry about is data migration.
+    • If you are thinking of using a SaaS solution which is a capability like SFDC or Adaptive insights, O365 etc, make sure you integrate
+      with our IDAM (okta - soo) Environment
